@@ -39,12 +39,13 @@ SECRET_KEY = 'heen()-oz@cx0%pd@5m(ki%q)(@d=!anj+bm$0x^j-wm8(4*pr'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.0.102','192.168.0.103','localhost','0.0.0.0']
+ALLOWED_HOSTS = ['192.168.0.102','192.168.0.103','localhost','0.0.0.0','.herokuapp.com']
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'whitenoise.runserver_nostatic',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -58,6 +59,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -68,7 +70,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'it_helpdesk.urls'
-CORS_ORIGIN_ALLOW_ALL = True # If this is used then `CORS_ORIGIN_WHITELIST` will not have any effect
+CORS_ORIGIN_ALLOW_ALL = True 
 CORS_ALLOW_CREDENTIALS = True
 TEMPLATES = [
     {

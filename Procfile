@@ -1,1 +1,0 @@
-web: gunicorn it_helpdesk.wsgi
