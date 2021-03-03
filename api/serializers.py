@@ -322,7 +322,6 @@ class PublicTicketSerializer(serializers.Serializer):
 
         if ticket.submitter_email:
             send_templated_mail(
-                'newticket_submitter',
                 context,
                 recipients=ticket.submitter_email,
                 sender=queue.from_address,
@@ -358,7 +357,7 @@ class PublicTicketSerializer(serializers.Serializer):
                 queue.updated_ticket_cc != queue.new_ticket_cc and \
                 queue.updated_ticket_cc not in messages_sent_to:
             send_templated_mail(
-                'newticket_cc',
+                
                 context,
                 recipients=queue.updated_ticket_cc,
                 sender=queue.from_address,
@@ -382,9 +381,9 @@ class PublicTicketSerializer(serializers.Serializer):
             ticket, title=str('Ticket Opened Via Web'), user=user)
         followup.save()
         # files = self._attach_files_to_follow_up(followup)
-        # self._send_messages(ticket=ticket,
-        #                     queue=queue,
-        #                     followup=followup)
+        self._send_messages(ticket=ticket,
+                             queue=queue,
+                             followup=followup)
 
 
 class FollowUpSerializer(ModelSerializer):

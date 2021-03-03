@@ -14,7 +14,6 @@ import os
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 from datetime import timedelta
-import django_heroku
 
 # sentry_sdk.init(
 #     dsn="https://2ab86e744c7945ae901157e20e7799b7@o528200.ingest.sentry.io/5645399",
@@ -39,7 +38,7 @@ SECRET_KEY = 'heen()-oz@cx0%pd@5m(ki%q)(@d=!anj+bm$0x^j-wm8(4*pr'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.0.102','192.168.0.103','localhost','0.0.0.0','.herokuapp.com']
+ALLOWED_HOSTS = ['192.168.0.102','192.168.0.103','localhost','0.0.0.0']
 
 
 # Application definition
@@ -120,6 +119,15 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+DEFAULT_FROM_EMAIL = 'janishparikh5@gmail.com'
+SERVER_EMAIL = 'janishparikh5@gmail.com'
+EMAIL_HOST='smtp.gmail.com'
+EMAIL_PORT=587
+EMAIL_HOST_USER='janishparikh@gmail.com'
+EMAIL_HOST_PASSWORD='17294444r'
+EMAIL_USE_TLS = True
+
 REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend'
@@ -127,7 +135,8 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
-        'rest_framework_simplejwt.authentication.JWTAuthentication',],
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        ],
 }
 
 SIMPLE_JWT = {
@@ -155,5 +164,3 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
 STATIC_URL = '/static/'
-# Activate Django-Heroku.
-django_heroku.settings(locals())

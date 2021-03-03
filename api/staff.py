@@ -527,7 +527,7 @@ def subscribe_staff_member_to_ticket(ticket, user):
 
 
 @api_view(['GET', 'POST'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 def update_ticket(request, ticket_id, public=False):
     if not (public or (
             request.user.is_authenticated and
@@ -597,7 +597,6 @@ def update_ticket(request, ticket_id, public=False):
     # broken into two stages to prevent changes from first replace being themselves
     # changed by the second replace due to conflicting syntax
     comment = comment.replace('{%', 'X-HELPDESK-COMMENT-VERBATIM').replace('%}', 'X-HELPDESK-COMMENT-ENDVERBATIM')
-    print("xxxxxxx")
     comment = comment.replace('X-HELPDESK-COMMENT-VERBATIM', '{% verbatim %}{%').replace(
         'X-HELPDESK-COMMENT-ENDVERBATIM', '%}{% endverbatim %}')
     # render the neutralized template

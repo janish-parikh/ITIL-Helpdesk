@@ -15,7 +15,7 @@ from .models import Attachment, EmailTemplate
 
 logger = logging.getLogger('helpdesk')
 
-def send_templated_mail(template_name,
+def send_templated_mail(
                         context,
                         recipients,
                         sender=None,
@@ -41,44 +41,11 @@ def send_templated_mail(template_name,
         along with the File objects to be read. files can be blank.
     """
     from django.core.mail import EmailMultiAlternatives
-    from django.template import engines
-    from_string = engines['django'].from_string
-
-    from api.settings import HELPDESK_EMAIL_SUBJECT_TEMPLATE
-
-    from .models import EmailTemplate
-
-    try:
-        t = EmailTemplate.objects.get(template_name__iexact=template_name)
-    except EmailTemplate.DoesNotExist:
-        try:
-            t = EmailTemplate.objects.get(template_name__iexact=template_name)
-        except EmailTemplate.DoesNotExist:
-            logger.warning('template "%s" does not exist, no mail sent', template_name)
-            return  # just ignore if template doesn't exist
-
-    subject_part = from_string(
-        HELPDESK_EMAIL_SUBJECT_TEMPLATE % {
-            "subject": t.subject
-        }).render(context).replace('\n', '').replace('\r', '')
-
-    # footer_file = os.path.join('helpdesk', 'email_text_footer.txt')
-
-    text_part = from_string(
-        "%s" % (t.plain_text)
-    ).render(context)
-
-    email_html_base_file = os.path.join('helpdesk', 'email_html_base.html')
+    
     # keep new lines in html emails
     if 'comment' in context:
         context['comment'] = mark_safe(context['comment'].replace('\r\n', '<br>'))
  
-    html_part = from_string(
-        "{%% extends '%s' %%}{%% block title %%}"
-        "%s"
-        "{%% endblock %%}{%% block content %%}%s{%% endblock %%}" %
-        (email_html_base_file, t.heading, t.html)
-    ).render(context)
 
     if isinstance(recipients, str):
         if recipients.find(','):
@@ -86,10 +53,9 @@ def send_templated_mail(template_name,
     elif type(recipients) != list:
         recipients = [recipients]
 
-    msg = EmailMultiAlternatives(subject_part, text_part,
+    msg = EmailMultiAlternatives(
                                  sender or settings.DEFAULT_FROM_EMAIL,
                                  recipients, bcc=bcc)
-    msg.attach_alternative(html_part, "text/html")
 
     if files:
         for filename, filefield in files:
