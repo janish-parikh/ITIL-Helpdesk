@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.utils.translation import ugettext as _
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
-
+from django.core.mail import EmailMultiAlternatives
 from api import settings as helpdesk_settings
 
 from .lib import safe_template_context, send_templated_mail
@@ -14,7 +14,12 @@ from .models import (Attachment, EmailTemplate, FollowUp, KBCategory, KBItem,
                      TicketDependency, UserSettings)
 
 User = get_user_model()
-        
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta(object):
+        model = User
+        fields = ('username', 'id','is_staff','email')
+
 class EditTicketSerializer(ModelSerializer):
     class Meta:
         model = Ticket
@@ -112,7 +117,7 @@ class QueueSerializer(ModelSerializer):
 
     class Meta:
         model = Queue
-        fields = '__all__'
+        fields = ['id','title',]
 
 class TicketSerializer(ModelSerializer):
 
@@ -150,9 +155,9 @@ class TicketFormSerializer(serializers.Serializer):
         initial='3' 
            )
 
-    due_date = serializers.DateTimeField(
-        required=False,
-    )
+    # due_date = serializers.DateTimeField(
+    #     required=False,
+    # )
 
     attachment = serializers.FileField(required=False, allow_empty_file = True)
 
@@ -237,7 +242,7 @@ class TicketFormSerializer(serializers.Serializer):
                         queue=queue,
                         description=self.validated_data['description'],
                         priority=self.validated_data['priority'],
-                        due_date=self.validated_data['due_date'],
+                        # due_date=self.validated_data['due_date'],
                         )
         if self.validated_data['assigned_to']:
             try:
@@ -257,6 +262,17 @@ class TicketFormSerializer(serializers.Serializer):
         followup = self._create_follow_up(
             ticket, title=str('Ticket Opened Via Web'), user=user)
         followup.save()
+        context = safe_template_context(ticket)
+        context['comment'] = followup.comment
+        messages_sent_to = []
+        sender = settings.DEFAULT_FROM_EMAIL
+        if ticket.submitter_email:
+            recipient = ticket.submitter_email
+            subject = "Your ticket has been generated" 
+            body = "We have our best experts looking on the issue and will get back to you at the earliest"
+            msg = EmailMultiAlternatives(subject, body, sender, [recipient,])
+            msg.send(fail_silently = False)
+
         # files = self._attach_files_to_follow_up(followup)
         # self._send_messages(ticket=ticket,
         #                     queue=queue,
@@ -283,9 +299,9 @@ class PublicTicketSerializer(serializers.Serializer):
         initial='3' 
            )
 
-    due_date = serializers.DateTimeField(
-        required=False,
-    )
+    # due_date = serializers.DateTimeField(
+    #     required=False,
+    # )
 
     attachment = serializers.FileField(required=False, allow_empty_file = True)
 
@@ -313,56 +329,57 @@ class PublicTicketSerializer(serializers.Serializer):
             files = process_attachments(followup, [files])
         return files
 
-    @staticmethod
-    def _send_messages(ticket, queue, followup, user=None):
-        context = safe_template_context(ticket)
-        context['comment'] = followup.comment
 
-        messages_sent_to = []
+    # @staticmethod
+    # def _send_messages(ticket, queue, followup, user=None):
+    #     context = safe_template_context(ticket)
+    #     context['comment'] = followup.comment
 
-        if ticket.submitter_email:
-            send_templated_mail(
-                context,
-                recipients=ticket.submitter_email,
-                sender=queue.from_address,
-                fail_silently=True,
-            )
-            messages_sent_to.append(ticket.submitter_email)
+    #     messages_sent_to = []
 
-        if ticket.assigned_to and \
-                ticket.assigned_to != user and \
-                ticket.assigned_to.usersettings_helpdesk.settings.get('email_on_ticket_assign', False) and \
-                ticket.assigned_to.email and \
-                ticket.assigned_to.email not in messages_sent_to:
-            send_templated_mail(
-                'assigned_owner',
-                context,
-                recipients=ticket.assigned_to.email,
-                sender=queue.from_address,
-                fail_silently=True,
-            )
-            messages_sent_to.append(ticket.assigned_to.email)
+    #     if ticket.submitter_email:
+    #         send_templated_mail(
+    #             context,
+    #             recipients=ticket.submitter_email,
+    #             sender=queue.from_address,
+    #             fail_silently=True,
+    #         )
+    #         messages_sent_to.append(ticket.submitter_email)
 
-        if queue.new_ticket_cc and queue.new_ticket_cc not in messages_sent_to:
-            send_templated_mail(
-                'newticket_cc',
-                context,
-                recipients=queue.new_ticket_cc,
-                sender=queue.from_address,
-                fail_silently=True,
-            )
-            messages_sent_to.append(queue.new_ticket_cc)
+    #     if ticket.assigned_to and \
+    #             ticket.assigned_to != user and \
+    #             ticket.assigned_to.usersettings_helpdesk.settings.get('email_on_ticket_assign', False) and \
+    #             ticket.assigned_to.email and \
+    #             ticket.assigned_to.email not in messages_sent_to:
+    #         send_templated_mail(
+    #             'assigned_owner',
+    #             context,
+    #             recipients=ticket.assigned_to.email,
+    #             sender=queue.from_address,
+    #             fail_silently=True,
+    #         )
+    #         messages_sent_to.append(ticket.assigned_to.email)
 
-        if queue.updated_ticket_cc and \
-                queue.updated_ticket_cc != queue.new_ticket_cc and \
-                queue.updated_ticket_cc not in messages_sent_to:
-            send_templated_mail(
+    #     if queue.new_ticket_cc and queue.new_ticket_cc not in messages_sent_to:
+    #         send_templated_mail(
+    #             'newticket_cc',
+    #             context,
+    #             recipients=queue.new_ticket_cc,
+    #             sender=queue.from_address,
+    #             fail_silently=True,
+    #         )
+    #         messages_sent_to.append(queue.new_ticket_cc)
+
+    #     if queue.updated_ticket_cc and \
+    #             queue.updated_ticket_cc != queue.new_ticket_cc and \
+    #             queue.updated_ticket_cc not in messages_sent_to:
+    #         send_templated_mail(
                 
-                context,
-                recipients=queue.updated_ticket_cc,
-                sender=queue.from_address,
-                fail_silently=True,
-            )
+    #             context,
+    #             recipients=queue.updated_ticket_cc,
+    #             sender=queue.from_address,
+    #             fail_silently=True,
+    #         )
 
     def save(self,user):
         queue = Queue.objects.get(id=int(self.validated_data['queue']))
@@ -373,7 +390,7 @@ class PublicTicketSerializer(serializers.Serializer):
                         queue=queue,
                         description=self.validated_data['description'],
                         priority=self.validated_data['priority'],
-                        due_date=self.validated_data['due_date'],
+                        # due_date=self.validated_data['due_date'],
                         )
         ticket.save()
         
@@ -381,9 +398,16 @@ class PublicTicketSerializer(serializers.Serializer):
             ticket, title=str('Ticket Opened Via Web'), user=user)
         followup.save()
         # files = self._attach_files_to_follow_up(followup)
-        self._send_messages(ticket=ticket,
-                             queue=queue,
-                             followup=followup)
+        context = safe_template_context(ticket)
+        context['comment'] = followup.comment
+        messages_sent_to = []
+        sender = settings.DEFAULT_FROM_EMAIL
+        if ticket.submitter_email:
+            recipient = ticket.submitter_email
+            subject = "Your ticket has been generated" 
+            body = "We have our best experts looking on the issue and will get back to you at the earliest"
+            msg = EmailMultiAlternatives(subject, body, sender, [recipient,])
+            msg.send(fail_silently = False)
 
 
 class FollowUpSerializer(ModelSerializer):
@@ -433,3 +457,17 @@ class KBItemSerializer(ModelSerializer):
     class Meta:
         model = KBItem
         fields = '__all__'
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        # The default result (access/refresh tokens)
+        data = super(CustomTokenObtainPairSerializer, self).validate(attrs)
+        # Custom data you want to include
+        data.update({'user': self.user.username})
+        # data.update({'id': self.user.id})
+        data.update({'status': self.user.is_staff})
+        # and everything else you want to send in the response
+        return data

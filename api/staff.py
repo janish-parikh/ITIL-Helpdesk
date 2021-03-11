@@ -38,9 +38,26 @@ from .serializers import (CurrentUserSerializer, EditFollowUpSerializer,
                           TicketCCEmailSerializer, TicketCCSerializer, 
                           TicketCCUserSerializer, TicketChangeSerializer,
                           TicketDependencySerializer, TicketFormSerializer,
-                          TicketSerializer, UserSettingsSerializer)
+                          TicketSerializer, UserSerializer, UserSettingsSerializer)
 
 User = get_user_model()
+from .serializers import UserSerializer
+from rest_framework import viewsets
+from rest_framework.response import Response
+
+class Userlist(viewsets.ViewSet):
+    """
+    A simple ViewSet for listing or retrieving users.
+    """
+    # permission_classes=[IsAuthenticated]
+    # authentication_classes=[JWTAuthentication]
+    def list(self, request):
+        if not request.user.is_staff:
+            raise PermissionDenied
+        queryset = User.objects.all()
+        serializer = UserSerializer(queryset, many=True)
+        return Response(serializer.data)
+
 
 def _get_user_queues(user):
     """Return the list of Queues the user can access.
@@ -63,7 +80,7 @@ def _has_access_to_queue(user, queue):
     :param queue: The django-helpdesk Queue instance
     :return: True if the user has permission (either by default or explicitly), false otherwise
     """
-    if user.is_superuser or not helpdesk_settings.HELPDESK_ENABLE_PER_QUEUE_STAFF_PERMISSION:
+    if user.is_superuser or not user.is_staff:
         return True
     else:
         return user.has_perm(queue.permission_name)
@@ -146,40 +163,40 @@ def dashboard(request):
     else:
         where_clause = """WHERE   q.id = t.queue_id"""
 
-    # get user assigned tickets page
-    paginator = Paginator(
-        tickets, tickets_per_page)
-    try:
-        tickets = paginator.page(user_tickets_page)
-    except PageNotAnInteger:
-        tickets = paginator.page(1)
-    except EmptyPage:
-        tickets = paginator.page(
-            paginator.num_pages)
+    # # get user assigned tickets page
+    # paginator = Paginator(
+    #     tickets, tickets_per_page)
+    # try:
+    #     tickets = paginator.page(user_tickets_page)
+    # except PageNotAnInteger:
+    #     tickets = paginator.page(1)
+    # except EmptyPage:
+    #     tickets = paginator.page(
+    #         paginator.num_pages)
 
-    # get user completed tickets page
-    paginator = Paginator(
-        tickets_closed_resolved, tickets_per_page)
-    try:
-        tickets_closed_resolved = paginator.page(
-            user_tickets_closed_resolved_page)
-    except PageNotAnInteger:
-        tickets_closed_resolved = paginator.page(1)
-    except EmptyPage:
-        tickets_closed_resolved = paginator.page(
-            paginator.num_pages)
+    # # get user completed tickets page
+    # paginator = Paginator(
+    #     tickets_closed_resolved, tickets_per_page)
+    # try:
+    #     tickets_closed_resolved = paginator.page(
+    #         user_tickets_closed_resolved_page)
+    # except PageNotAnInteger:
+    #     tickets_closed_resolved = paginator.page(1)
+    # except EmptyPage:
+    #     tickets_closed_resolved = paginator.page(
+    #         paginator.num_pages)
 
-    # get user submitted tickets page
-    paginator = Paginator(
-        all_tickets_reported_by_current_user, tickets_per_page)
-    try:
-        all_tickets_reported_by_current_user = paginator.page(
-            all_tickets_reported_by_current_user_page)
-    except PageNotAnInteger:
-        all_tickets_reported_by_current_user = paginator.page(1)
-    except EmptyPage:
-        all_tickets_reported_by_current_user = paginator.page(
-            paginator.num_pages)
+    # # get user submitted tickets page
+    # paginator = Paginator(
+    #     all_tickets_reported_by_current_user, tickets_per_page)
+    # try:
+    #     all_tickets_reported_by_current_user = paginator.page(
+    #         all_tickets_reported_by_current_user_page)
+    # except PageNotAnInteger:
+    #     all_tickets_reported_by_current_user = paginator.page(1)
+    # except EmptyPage:
+    #     all_tickets_reported_by_current_user = paginator.page(
+    #         paginator.num_pages)
 
     user_tickets_serialier=TicketSerializer(tickets, many = True)
     user_tickets_closed_resolved_serializer = TicketSerializer(tickets_closed_resolved, many = True)
@@ -285,8 +302,11 @@ def calc_basic_ticket_stats(Tickets):
     return basic_ticket_stats
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+@staff_member_required
 def ticket_list(request):
+    if not request.user.is_staff:
+        raise PermissionDenied()
     context = {}
     user_queues = _get_user_queues(request.user)
     # Prefilter the allowed tickets
@@ -420,14 +440,16 @@ def ticket_list(request):
     })
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+@staff_member_required
 def view_ticket(request, ticket_id):
+    if not request.user.is_staff:
+        raise PermissionDenied()
     ticket = get_object_or_404(Ticket, id=ticket_id)
     if not _has_access_to_queue(request.user, ticket.queue):
         raise PermissionDenied()
     if not _is_my_ticket(request.user, ticket):
         raise PermissionDenied()
-
     if 'take' in request.GET:
         # Allow the user to assign the ticket to themselves whilst viewing it.
 
@@ -463,7 +485,7 @@ def view_ticket(request, ticket_id):
     folloups = FollowUp.objects.filter(ticket_id = ticket_id)
     users_serializer = CurrentUserSerializer(users, many=True)
     # TODO: shouldn't this template get a form to begin with?
-    serializer = TicketFormSerializer(initial={'due_date': ticket.due_date})
+    serializer = TicketFormSerializer()
     ticket_serializer = TicketSerializer(ticket)
     folloups_serializer = FollowUpSerializer(folloups, many = True)
     ticketcc_string, show_subscribe = \
@@ -526,290 +548,291 @@ def subscribe_staff_member_to_ticket(ticket, user):
     ticketcc.save()
 
 
-@api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
-def update_ticket(request, ticket_id, public=False):
-    if not (public or (
-            request.user.is_authenticated and
-            request.user.is_active and
-            request.user.is_staff)):
-        raise PermissionDenied
+# @api_view(['GET', 'POST'])
+# @authentication_classes([JWTAuthentication])
+# @staff_member_required
+# def update_ticket(request, ticket_id, public=False):
+#     if not (public or (
+#             request.user.is_authenticated and
+#             request.user.is_active and
+#             request.user.is_staff)):
+#         raise PermissionDenied
 
-    ticket = get_object_or_404(Ticket, id=ticket_id)
+#     ticket = get_object_or_404(Ticket, id=ticket_id)
 
-    date_re = re.compile(
-        r'(?P<month>\d{1,2})/(?P<day>\d{1,2})/(?P<year>\d{4})$'
-    )
+#     date_re = re.compile(
+#         r'(?P<month>\d{1,2})/(?P<day>\d{1,2})/(?P<year>\d{4})$'
+#     )
 
-    comment = request.POST.get('comment', '')
-    new_status = int(request.POST.get('new_status', ticket.status))
-    title = request.POST.get('title', '')
-    public = request.POST.get('public', False)
-    owner = int(request.POST.get('owner', -1))
-    priority = int(request.POST.get('priority', ticket.priority))
-    due_date_year = int(request.POST.get('due_date_year', 0))
-    due_date_month = int(request.POST.get('due_date_month', 0))
-    due_date_day = int(request.POST.get('due_date_day', 0))
-    # NOTE: jQuery's default for dates is mm/dd/yy
-    # very US-centric but for now that's the only format supported
-    # until we clean up code to internationalize a little more
-    due_date = request.POST.get('due_date', None) or None
+#     comment = request.POST.get('comment', '')
+#     new_status = int(request.POST.get('new_status', ticket.status))
+#     title = request.POST.get('title', '')
+#     public = request.POST.get('public', False)
+#     owner = int(request.POST.get('owner', -1))
+#     priority = int(request.POST.get('priority', ticket.priority))
+#     due_date_year = int(request.POST.get('due_date_year', 0))
+#     due_date_month = int(request.POST.get('due_date_month', 0))
+#     due_date_day = int(request.POST.get('due_date_day', 0))
+#     # NOTE: jQuery's default for dates is mm/dd/yy
+#     # very US-centric but for now that's the only format supported
+#     # until we clean up code to internationalize a little more
+#     due_date = request.POST.get('due_date', None) or None
 
-    if due_date is not None:
-        # based on Django code to parse dates:
-        # https://docs.djangoproject.com/en/2.0/_modules/django/utils/dateparse/
-        match = date_re.match(due_date)
-        if match:
-            kw = {k: int(v) for k, v in match.groupdict().items()}
-            due_date = date(**kw)
-    else:
-        # old way, probably deprecated?
-        if not (due_date_year and due_date_month and due_date_day):
-            due_date = ticket.due_date
-        else:
-            # NOTE: must be an easier way to create a new date than doing it this way?
-            if ticket.due_date:
-                due_date = ticket.due_date
-            else:
-                due_date = timezone.now()
-            due_date = due_date.replace(due_date_year, due_date_month, due_date_day)
+#     if due_date is not None:
+#         # based on Django code to parse dates:
+#         # https://docs.djangoproject.com/en/2.0/_modules/django/utils/dateparse/
+#         match = date_re.match(due_date)
+#         if match:
+#             kw = {k: int(v) for k, v in match.groupdict().items()}
+#             due_date = date(**kw)
+#     else:
+#         # old way, probably deprecated?
+#         if not (due_date_year and due_date_month and due_date_day):
+#             due_date = ticket.due_date
+#         else:
+#             # NOTE: must be an easier way to create a new date than doing it this way?
+#             if ticket.due_date:
+#                 due_date = ticket.due_date
+#             else:
+#                 due_date = timezone.now()
+#             due_date = due_date.replace(due_date_year, due_date_month, due_date_day)
 
-    no_changes = all([
-        not request.FILES,
-        not comment,
-        new_status == ticket.status,
-        title == ticket.title,
-        priority == int(ticket.priority),
-        due_date == ticket.due_date,
-        (owner == -1) or (not owner and not ticket.assigned_to) or
-        (owner and User.objects.get(id=owner) == ticket.assigned_to),
-    ])
-    if no_changes:
-        return Response("NO changes")
+#     no_changes = all([
+#         not request.FILES,
+#         not comment,
+#         new_status == ticket.status,
+#         title == ticket.title,
+#         priority == int(ticket.priority),
+#         due_date == ticket.due_date,
+#         (owner == -1) or (not owner and not ticket.assigned_to) or
+#         (owner and User.objects.get(id=owner) == ticket.assigned_to),
+#     ])
+#     if no_changes:
+#         return Response("NO changes")
 
-    # We need to allow the 'ticket' and 'queue' contexts to be applied to the
-    # comment.
-    context = safe_template_context(ticket)
+#     # We need to allow the 'ticket' and 'queue' contexts to be applied to the
+#     # comment.
+#     context = safe_template_context(ticket)
 
-    from django.template import engines
-    template_func = engines['django'].from_string
-    # this prevents system from trying to render any template tags
-    # broken into two stages to prevent changes from first replace being themselves
-    # changed by the second replace due to conflicting syntax
-    comment = comment.replace('{%', 'X-HELPDESK-COMMENT-VERBATIM').replace('%}', 'X-HELPDESK-COMMENT-ENDVERBATIM')
-    comment = comment.replace('X-HELPDESK-COMMENT-VERBATIM', '{% verbatim %}{%').replace(
-        'X-HELPDESK-COMMENT-ENDVERBATIM', '%}{% endverbatim %}')
-    # render the neutralized template
-    comment = template_func(comment).render(context)
+#     from django.template import engines
+#     template_func = engines['django'].from_string
+#     # this prevents system from trying to render any template tags
+#     # broken into two stages to prevent changes from first replace being themselves
+#     # changed by the second replace due to conflicting syntax
+#     comment = comment.replace('{%', 'X-HELPDESK-COMMENT-VERBATIM').replace('%}', 'X-HELPDESK-COMMENT-ENDVERBATIM')
+#     comment = comment.replace('X-HELPDESK-COMMENT-VERBATIM', '{% verbatim %}{%').replace(
+#         'X-HELPDESK-COMMENT-ENDVERBATIM', '%}{% endverbatim %}')
+#     # render the neutralized template
+#     comment = template_func(comment).render(context)
 
-    if owner is -1 and ticket.assigned_to:
-        owner = ticket.assigned_to.id
+#     if owner is -1 and ticket.assigned_to:
+#         owner = ticket.assigned_to.id
 
-    f = FollowUp(ticket=ticket, date=timezone.now(), comment=comment)
+#     f = FollowUp(ticket=ticket, date=timezone.now(), comment=comment)
 
-    if request.user.is_staff or helpdesk_settings.HELPDESK_ALLOW_NON_STAFF_TICKET_UPDATE:
-        f.user = request.user
+#     if request.user.is_staff or helpdesk_settings.HELPDESK_ALLOW_NON_STAFF_TICKET_UPDATE:
+#         f.user = request.user
 
-    f.public = public
+#     f.public = public
 
-    reassigned = False
+#     reassigned = False
 
-    old_owner = ticket.assigned_to
-    if owner is not -1:
-        if owner != 0 and ((ticket.assigned_to and owner != ticket.assigned_to.id) or not ticket.assigned_to):
-            new_user = User.objects.get(id=owner)
-            f.title = _('Assigned to %(username)s') % {
-                'username': new_user.get_username(),
-            }
-            ticket.assigned_to = new_user
-            reassigned = True
-        # user changed owner to 'unassign'
-        elif owner == 0 and ticket.assigned_to is not None:
-            f.title = _('Unassigned')
-            ticket.assigned_to = None
+#     old_owner = ticket.assigned_to
+#     if owner != -1:
+#         if owner != 0 and ((ticket.assigned_to and owner != ticket.assigned_to.id) or not ticket.assigned_to):
+#             new_user = User.objects.get(id=owner)
+#             f.title = _('Assigned to %(username)s') % {
+#                 'username': new_user.get_username(),
+#             }
+#             ticket.assigned_to = new_user
+#             reassigned = True
+#         # user changed owner to 'unassign'
+#         elif owner == 0 and ticket.assigned_to is not None:
+#             f.title = _('Unassigned')
+#             ticket.assigned_to = None
 
-    old_status_str = ticket.get_status_display()
-    old_status = ticket.status
-    if new_status != ticket.status:
-        ticket.status = new_status
-        ticket.save()
-        f.new_status = new_status
-        ticket_status_changed = True
-        if f.title:
-            f.title += ' and %s' % ticket.get_status_display()
-        else:
-            f.title = '%s' % ticket.get_status_display()
+#     old_status_str = ticket.get_status_display()
+#     old_status = ticket.status
+#     if new_status != ticket.status:
+#         ticket.status = new_status
+#         ticket.save()
+#         f.new_status = new_status
+#         ticket_status_changed = True
+#         if f.title:
+#             f.title += ' and %s' % ticket.get_status_display()
+#         else:
+#             f.title = '%s' % ticket.get_status_display()
 
-    if not f.title:
-        if f.comment:
-            f.title = _('Comment')
-        else:
-            f.title = _('Updated')
+#     if not f.title:
+#         if f.comment:
+#             f.title = _('Comment')
+#         else:
+#             f.title = _('Updated')
 
-    f.save()
+#     f.save()
 
-    files = process_attachments(f, request.FILES.getlist('attachment'))
+#     files = process_attachments(f, request.FILES.getlist('attachment'))
 
-    if title and title != ticket.title:
-        c = TicketChange(
-            followup=f,
-            field=_('Title'),
-            old_value=ticket.title,
-            new_value=title,
-        )
-        c.save()
-        ticket.title = title
+#     if title and title != ticket.title:
+#         c = TicketChange(
+#             followup=f,
+#             field=_('Title'),
+#             old_value=ticket.title,
+#             new_value=title,
+#         )
+#         c.save()
+#         ticket.title = title
 
-    if new_status != old_status:
-        c = TicketChange(
-            followup=f,
-            field=_('Status'),
-            old_value=old_status_str,
-            new_value=ticket.get_status_display(),
-        )
-        c.save()
+#     if new_status != old_status:
+#         c = TicketChange(
+#             followup=f,
+#             field=_('Status'),
+#             old_value=old_status_str,
+#             new_value=ticket.get_status_display(),
+#         )
+#         c.save()
 
-    if ticket.assigned_to != old_owner:
-        c = TicketChange(
-            followup=f,
-            field=_('Owner'),
-            old_value=old_owner,
-            new_value=ticket.assigned_to,
-        )
-        c.save()
+#     if ticket.assigned_to != old_owner:
+#         c = TicketChange(
+#             followup=f,
+#             field=_('Owner'),
+#             old_value=old_owner,
+#             new_value=ticket.assigned_to,
+#         )
+#         c.save()
 
-    if priority != ticket.priority:
-        c = TicketChange(
-            followup=f,
-            field=_('Priority'),
-            old_value=ticket.priority,
-            new_value=priority,
-        )
-        c.save()
-        ticket.priority = priority
+#     if priority != ticket.priority:
+#         c = TicketChange(
+#             followup=f,
+#             field=_('Priority'),
+#             old_value=ticket.priority,
+#             new_value=priority,
+#         )
+#         c.save()
+#         ticket.priority = priority
 
-    if due_date != ticket.due_date:
-        c = TicketChange(
-            followup=f,
-            field=_('Due on'),
-            old_value=ticket.due_date,
-            new_value=due_date,
-        )
-        c.save()
-        ticket.due_date = due_date
+#     if due_date != ticket.due_date:
+#         c = TicketChange(
+#             followup=f,
+#             field=_('Due on'),
+#             old_value=ticket.due_date,
+#             new_value=due_date,
+#         )
+#         c.save()
+#         ticket.due_date = due_date
 
-    if new_status in (Ticket.RESOLVED_STATUS, Ticket.CLOSED_STATUS):
-        if new_status == Ticket.RESOLVED_STATUS or ticket.resolution is None:
-            ticket.resolution = comment
+#     if new_status in (Ticket.RESOLVED_STATUS, Ticket.CLOSED_STATUS):
+#         if new_status == Ticket.RESOLVED_STATUS or ticket.resolution is None:
+#             ticket.resolution = comment
 
-    messages_sent_to = []
+#     messages_sent_to = []
 
-    # ticket might have changed above, so we re-instantiate context with the
-    # (possibly) updated ticket.
-    context = safe_template_context(ticket)
-    context.update(
-        resolution=ticket.resolution,
-        comment=f.comment,
-    )
+#     # ticket might have changed above, so we re-instantiate context with the
+#     # (possibly) updated ticket.
+#     context = safe_template_context(ticket)
+#     context.update(
+#         resolution=ticket.resolution,
+#         comment=f.comment,
+#     )
 
-    if public and (f.comment or (
-            f.new_status in (Ticket.RESOLVED_STATUS,
-                             Ticket.CLOSED_STATUS))):
-        if f.new_status == Ticket.RESOLVED_STATUS:
-            template = 'resolved_'
-        elif f.new_status == Ticket.CLOSED_STATUS:
-            template = 'closed_'
-        else:
-            template = 'updated_'
+#     if public and (f.comment or (
+#             f.new_status in (Ticket.RESOLVED_STATUS,
+#                              Ticket.CLOSED_STATUS))):
+#         if f.new_status == Ticket.RESOLVED_STATUS:
+#             template = 'resolved_'
+#         elif f.new_status == Ticket.CLOSED_STATUS:
+#             template = 'closed_'
+#         else:
+#             template = 'updated_'
 
-        template_suffix = 'submitter'
+#         template_suffix = 'submitter'
 
-        if ticket.submitter_email:
-            send_templated_mail(
-                template + template_suffix,
-                context,
-                recipients=ticket.submitter_email,
-                sender=ticket.queue.from_address,
-                fail_silently=True,
-                files=files,
-            )
-            messages_sent_to.append(ticket.submitter_email)
+#         if ticket.submitter_email:
+#             send_templated_mail(
+#                 template + template_suffix,
+#                 context,
+#                 recipients=ticket.submitter_email,
+#                 sender=ticket.queue.from_address,
+#                 fail_silently=True,
+#                 files=files,
+#             )
+#             messages_sent_to.append(ticket.submitter_email)
 
-        template_suffix = 'cc'
+#         template_suffix = 'cc'
 
-        for cc in ticket.ticketcc_set.all():
-            if cc.email_address not in messages_sent_to:
-                send_templated_mail(
-                    template + template_suffix,
-                    context,
-                    recipients=cc.email_address,
-                    sender=ticket.queue.from_address,
-                    fail_silently=True,
-                    files=files,
-                )
-                messages_sent_to.append(cc.email_address)
+#         for cc in ticket.ticketcc_set.all():
+#             if cc.email_address not in messages_sent_to:
+#                 send_templated_mail(
+#                     template + template_suffix,
+#                     context,
+#                     recipients=cc.email_address,
+#                     sender=ticket.queue.from_address,
+#                     fail_silently=True,
+#                     files=files,
+#                 )
+#                 messages_sent_to.append(cc.email_address)
 
-    if ticket.assigned_to and \
-            request.user != ticket.assigned_to and \
-            ticket.assigned_to.email and \
-            ticket.assigned_to.email not in messages_sent_to:
-        # We only send e-mails to staff members if the ticket is updated by
-        # another user. The actual template varies, depending on what has been
-        # changed.
-        if reassigned:
-            template_staff = 'assigned_owner'
-        elif f.new_status == Ticket.RESOLVED_STATUS:
-            template_staff = 'resolved_owner'
-        elif f.new_status == Ticket.CLOSED_STATUS:
-            template_staff = 'closed_owner'
-        else:
-            template_staff = 'updated_owner'
+#     if ticket.assigned_to and \
+#             request.user != ticket.assigned_to and \
+#             ticket.assigned_to.email and \
+#             ticket.assigned_to.email not in messages_sent_to:
+#         # We only send e-mails to staff members if the ticket is updated by
+#         # another user. The actual template varies, depending on what has been
+#         # changed.
+#         if reassigned:
+#             template_staff = 'assigned_owner'
+#         elif f.new_status == Ticket.RESOLVED_STATUS:
+#             template_staff = 'resolved_owner'
+#         elif f.new_status == Ticket.CLOSED_STATUS:
+#             template_staff = 'closed_owner'
+#         else:
+#             template_staff = 'updated_owner'
 
-        if (not reassigned or
-            (reassigned and
-             ticket.assigned_to.usersettings_helpdesk.settings.get(
-                 'email_on_ticket_assign', False))) or \
-                (not reassigned and
-                 ticket.assigned_to.usersettings_helpdesk.settings.get(
-                     'email_on_ticket_change', False)):
-            send_templated_mail(
-                template_staff,
-                context,
-                recipients=ticket.assigned_to.email,
-                sender=ticket.queue.from_address,
-                fail_silently=True,
-                files=files,
-            )
-            messages_sent_to.append(ticket.assigned_to.email)
+#         if (not reassigned or
+#             (reassigned and
+#              ticket.assigned_to.usersettings_helpdesk.settings.get(
+#                  'email_on_ticket_assign', False))) or \
+#                 (not reassigned and
+#                  ticket.assigned_to.usersettings_helpdesk.settings.get(
+#                      'email_on_ticket_change', False)):
+#             send_templated_mail(
+#                 template_staff,
+#                 context,
+#                 recipients=ticket.assigned_to.email,
+#                 sender=ticket.queue.from_address,
+#                 fail_silently=True,
+#                 files=files,
+#             )
+#             messages_sent_to.append(ticket.assigned_to.email)
 
-    if ticket.queue.updated_ticket_cc and ticket.queue.updated_ticket_cc not in messages_sent_to:
-        if reassigned:
-            template_cc = 'assigned_cc'
-        elif f.new_status == Ticket.RESOLVED_STATUS:
-            template_cc = 'resolved_cc'
-        elif f.new_status == Ticket.CLOSED_STATUS:
-            template_cc = 'closed_cc'
-        else:
-            template_cc = 'updated_cc'
+#     if ticket.queue.updated_ticket_cc and ticket.queue.updated_ticket_cc not in messages_sent_to:
+#         if reassigned:
+#             template_cc = 'assigned_cc'
+#         elif f.new_status == Ticket.RESOLVED_STATUS:
+#             template_cc = 'resolved_cc'
+#         elif f.new_status == Ticket.CLOSED_STATUS:
+#             template_cc = 'closed_cc'
+#         else:
+#             template_cc = 'updated_cc'
 
-        send_templated_mail(
-            template_cc,
-            context,
-            recipients=ticket.queue.updated_ticket_cc,
-            sender=ticket.queue.from_address,
-            fail_silently=True,
-            files=files,
-        )
+#         send_templated_mail(
+#             template_cc,
+#             context,
+#             recipients=ticket.queue.updated_ticket_cc,
+#             sender=ticket.queue.from_address,
+#             fail_silently=True,
+#             files=files,
+#         )
 
-    ticket.save()
+#     ticket.save()
 
-    # auto subscribe user if enabled
-    if helpdesk_settings.HELPDESK_AUTO_SUBSCRIBE_ON_TICKET_RESPONSE and request.user.is_authenticated:
-        ticketcc_string, SHOW_SUBSCRIBE = return_ticketccstring_and_show_subscribe(request.user, ticket)
-        if SHOW_SUBSCRIBE:
-            subscribe_staff_member_to_ticket(ticket, request.user)
-    return Response("Helpdesk Redirect")
-    # return return_to_ticket(request.user, helpdesk_settings, ticket)
+#     # auto subscribe user if enabled
+#     if helpdesk_settings.HELPDESK_AUTO_SUBSCRIBE_ON_TICKET_RESPONSE and request.user.is_authenticated:
+#         ticketcc_string, SHOW_SUBSCRIBE = return_ticketccstring_and_show_subscribe(request.user, ticket)
+#         if SHOW_SUBSCRIBE:
+#             subscribe_staff_member_to_ticket(ticket, request.user)
+#     return Response("Helpdesk Redirect")
+#     # return return_to_ticket(request.user, helpdesk_settings, ticket)
 
 
 def return_to_ticket(user, helpdesk_settings, ticket):
@@ -822,6 +845,7 @@ def return_to_ticket(user, helpdesk_settings, ticket):
 
 
 @api_view(['GET'])
+@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def rss_list(request):
     queues = Queue.objects.all()
@@ -829,7 +853,8 @@ def rss_list(request):
     return Response(serializer.data)
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+@staff_member_required
 def edit_ticket(request, ticket_id):
     ticket = get_object_or_404(Ticket, id=ticket_id)
     if not _has_access_to_queue(request.user, ticket.queue):
@@ -847,8 +872,10 @@ def edit_ticket(request, ticket_id):
         serializer = EditTicketSerializer(instance=ticket)
     return Response(serializer.data)
 
-@api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
+
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@staff_member_required
 def create_ticket(request):
     assignable_users = User.objects.filter(is_active=True, is_staff=True).order_by(User.USERNAME_FIELD)
     if request.method == 'POST':
@@ -863,7 +890,7 @@ def create_ticket(request):
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)   
     else:
         initial_data = {}
-        initial_data['submitter_email'] = request.user.email
+        initial_data['submitter_email'] = request.GET['submitter_email']
         if 'queue' in request.GET:
             initial_data['queue'] = request.GET['queue']
 
@@ -904,7 +931,8 @@ def hold_ticket(request, ticket_id, unhold=False):
     return Response(ticket_serializer.data)
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+@staff_member_required
 def unhold_ticket(request, ticket_id, unhold = True):
     ticket = get_object_or_404(Ticket, id=ticket_id)
     if not _has_access_to_queue(request.user, ticket.queue):
@@ -933,7 +961,8 @@ def unhold_ticket(request, ticket_id, unhold = True):
     return Response(ticket_serializer.data)
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+@staff_member_required
 def ticket_cc(request, ticket_id):
     ticket = get_object_or_404(Ticket, id=ticket_id)
     ticket_serializer = TicketSerializer(ticket)
@@ -973,7 +1002,8 @@ def ticket_cc_add(request, ticket_id):
         'user': serializer_user.data,})
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+@staff_member_required
 def ticket_cc_del(request, ticket_id, cc_id):
     cc = get_object_or_404(TicketCC, ticket__id=ticket_id, id=cc_id)
     serializer = TicketCCSerializer(cc)
@@ -982,7 +1012,8 @@ def ticket_cc_del(request, ticket_id, cc_id):
     return Response(serializer.data)
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+@staff_member_required
 def followup_edit(request, ticket_id, followup_id):
     """Edit followup options with an ability to change the ticket."""
     followup = get_object_or_404(FollowUp, id=followup_id)
@@ -1040,7 +1071,8 @@ def followup_edit(request, ticket_id, followup_id):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+@staff_member_required
 def followup_delete(request, ticket_id, followup_id):
     """followup delete for superuser"""
 
@@ -1053,7 +1085,8 @@ def followup_delete(request, ticket_id, followup_id):
     return Response(serializer.data)
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+@staff_member_required
 def ticket_dependency_add(request, ticket_id):
     ticket = get_object_or_404(Ticket, id=ticket_id)
     if not _has_access_to_queue(request.user, ticket.queue):
@@ -1077,7 +1110,8 @@ def ticket_dependency_add(request, ticket_id):
     return Response(serializer.errors)
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+@staff_member_required
 def ticket_dependency_del(request, ticket_id, dependency_id):
     dependency = get_object_or_404(TicketDependency, ticket__id=ticket_id, id=dependency_id)
     serializer = TicketDependencySerializer(dependency, many= True)
@@ -1086,7 +1120,8 @@ def ticket_dependency_del(request, ticket_id, dependency_id):
     return Response(serializer.data)
 
 @api_view(['POST'])
-@permission_classes([IsAdminUser])
+@authentication_classes([JWTAuthentication])
+@staff_member_required
 def attachment_del(request, ticket_id, attachment_id):
     ticket = get_object_or_404(Ticket, id=ticket_id)
     if not _has_access_to_queue(request.user, ticket.queue):

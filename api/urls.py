@@ -7,6 +7,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 router = SimpleRouter()
 router.register(r'user', views.UserViewSet, 'User')
+router.register(r'user_list', staff.Userlist, 'user_list')
 router.register(r'queue', views.QueueViewSet, 'Queue')
 router.register(r'presetreply', views.PreSetReplyViewSet, 'PreSetReply')
 
@@ -34,9 +35,9 @@ urlpatterns += [
         name='userview'),
 
     
-     url(r'^tickets/(?P<ticket_id>[0-9]+)/update/$',
-        staff.update_ticket,
-        name='update'),
+    #  url(r'^tickets/(?P<ticket_id>[0-9]+)/update/$',
+    #     staff.update_ticket,
+    #     name='update'),
 
     url(r'^tickets/(?P<ticket_id>[0-9]+)/followup_edit/(?P<followup_id>[0-9]+)/$',
         staff.followup_edit,
@@ -50,9 +51,9 @@ urlpatterns += [
         staff.edit_ticket,
         name='edit'),
 
-    url(r'^tickets/(?P<ticket_id>[0-9]+)/update/$',
-        staff.update_ticket,
-        name='update'),
+    # url(r'^tickets/(?P<ticket_id>[0-9]+)/update/$',
+    #     staff.update_ticket,
+    #     name='update'),
 
     url(r'^tickets/(?P<ticket_id>[0-9]+)/hold/$',
         staff.hold_ticket,
@@ -86,7 +87,7 @@ urlpatterns += [
         staff.attachment_del,
         name='attachment_del'),
 
-    url(r'^rss/$',
+    url(r'^queue_list/$',
         staff.rss_list,
         name='rss_index'),
 ]
@@ -103,14 +104,17 @@ urlpatterns += [
         url(r'^kb/(?P<slug>[A-Za-z0-9_-]+)/$',
             kb.category,
             name='kb_category'),
+        
     ]
 
 
 urlpatterns += [
-    path('login/', TokenObtainPairView.as_view(), name = 'token_pair'),
+    path('login/', views.CustomTokenObtainPairView.as_view(), name = 'token_pair'),
     path('refreshtoken/', TokenRefreshView.as_view(), name = 'refresh_token'),
     path('tokenverify/', TokenVerifyView.as_view(), name = 'token_verify'),
 ]
+from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
+from . import views
 
 """
 - For the first view, you send the refresh token to get a new access token.

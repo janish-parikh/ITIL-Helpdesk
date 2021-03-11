@@ -33,7 +33,7 @@ class UserViewSet(ViewSet):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
-@api_view(['GET', 'POST'])
+@api_view(['GET',])
 @permission_classes([IsAuthenticated])
 @authentication_classes([JWTAuthentication])
 def view_ticket(request, ticket_id):
@@ -43,7 +43,6 @@ def view_ticket(request, ticket_id):
     folloups = FollowUp.objects.filter(ticket_id = ticket_id, public=True)
     ticket_serializer = TicketSerializer(ticket)
     folloups_serializer = FollowUpSerializer(folloups, many = True)
-    
     return Response( {
             'ticket': ticket_serializer.data,
             'followups' : folloups_serializer.data,
@@ -53,6 +52,8 @@ def view_ticket(request, ticket_id):
 
 class QueueViewSet(ViewSet):
     permission_classes=[IsAdminUser]
+    authentication_classes=[JWTAuthentication]
+
     def list(self, request):
         queryset = Queue.objects.order_by('pk')
         serializer = QueueSerializer(queryset, many=True)
@@ -84,6 +85,8 @@ class QueueViewSet(ViewSet):
 
 class PreSetReplyViewSet(ViewSet):
     permission_classes=[IsAdminUser]
+    authentication_classes=[JWTAuthentication]
+
     def list(self, request):
         queryset = PreSetReply.objects.order_by('pk')
         serializer = PreSetReplySerializer(queryset, many=True)
@@ -122,3 +125,9 @@ class PreSetReplyViewSet(ViewSet):
         return Response(status=204)
 
 
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import CustomTokenObtainPairSerializer
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    # Replace the serializer with your custom
+    serializer_class = CustomTokenObtainPairSerializer

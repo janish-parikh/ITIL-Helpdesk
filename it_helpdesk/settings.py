@@ -11,8 +11,8 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
-import sentry_sdk
-from sentry_sdk.integrations.django import DjangoIntegration
+# import sentry_sdk
+# from sentry_sdk.integrations.django import DjangoIntegration
 from datetime import timedelta
 
 # sentry_sdk.init(
@@ -120,12 +120,12 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-DEFAULT_FROM_EMAIL = 'janishparikh5@gmail.com'
-SERVER_EMAIL = 'janishparikh5@gmail.com'
+DEFAULT_FROM_EMAIL = 'cosgrid@gmail.com'
+SERVER_EMAIL = 'cosgrid@gmail.com'
 EMAIL_HOST='smtp.gmail.com'
 EMAIL_PORT=587
-EMAIL_HOST_USER='janishparikh@gmail.com'
-EMAIL_HOST_PASSWORD='17294444r'
+EMAIL_HOST_USER='cosgrid@gmail.com'
+EMAIL_HOST_PASSWORD='cosgrid123'
 EMAIL_USE_TLS = True
 
 REST_FRAMEWORK = {
@@ -158,7 +158,6 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
