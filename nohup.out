@@ -1,0 +1,100 @@
+Traceback (most recent call last):
+  File "manage.py", line 22, in <module>
+    main()
+  File "manage.py", line 18, in main
+    execute_from_command_line(sys.argv)
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/core/management/__init__.py", line 364, in execute_from_command_line
+    utility.execute()
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/core/management/__init__.py", line 308, in execute
+    settings.INSTALLED_APPS
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/conf/__init__.py", line 56, in __getattr__
+    self._setup(name)
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/conf/__init__.py", line 41, in _setup
+    self._wrapped = Settings(settings_module)
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/conf/__init__.py", line 110, in __init__
+    mod = importlib.import_module(self.SETTINGS_MODULE)
+  File "/usr/lib/python2.7/importlib/__init__.py", line 37, in import_module
+    __import__(name)
+  File "/home/ubuntu/it_helpdesk/it_helpdesk/settings.py", line 14, in <module>
+    import sentry_sdk
+ImportError: No module named sentry_sdk
+Traceback (most recent call last):
+  File "manage.py", line 22, in <module>
+    main()
+  File "manage.py", line 18, in main
+    execute_from_command_line(sys.argv)
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/core/management/__init__.py", line 364, in execute_from_command_line
+    utility.execute()
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/core/management/__init__.py", line 308, in execute
+    settings.INSTALLED_APPS
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/conf/__init__.py", line 56, in __getattr__
+    self._setup(name)
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/conf/__init__.py", line 41, in _setup
+    self._wrapped = Settings(settings_module)
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/conf/__init__.py", line 110, in __init__
+    mod = importlib.import_module(self.SETTINGS_MODULE)
+  File "/usr/lib/python2.7/importlib/__init__.py", line 37, in import_module
+    __import__(name)
+  File "/home/ubuntu/it_helpdesk/it_helpdesk/settings.py", line 14, in <module>
+    import sentry_sdk
+ImportError: No module named sentry_sdk
+Traceback (most recent call last):
+  File "manage.py", line 22, in <module>
+    main()
+  File "manage.py", line 18, in main
+    execute_from_command_line(sys.argv)
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/core/management/__init__.py", line 364, in execute_from_command_line
+    utility.execute()
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/core/management/__init__.py", line 308, in execute
+    settings.INSTALLED_APPS
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/conf/__init__.py", line 56, in __getattr__
+    self._setup(name)
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/conf/__init__.py", line 41, in _setup
+    self._wrapped = Settings(settings_module)
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/conf/__init__.py", line 110, in __init__
+    mod = importlib.import_module(self.SETTINGS_MODULE)
+  File "/usr/lib/python2.7/importlib/__init__.py", line 37, in import_module
+    __import__(name)
+  File "/home/ubuntu/it_helpdesk/it_helpdesk/settings.py", line 14, in <module>
+    import sentry_sdk
+ImportError: No module named sentry_sdk
+Traceback (most recent call last):
+  File "manage.py", line 22, in <module>
+    main()
+  File "manage.py", line 18, in main
+    execute_from_command_line(sys.argv)
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/core/management/__init__.py", line 364, in execute_from_command_line
+    utility.execute()
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/core/management/__init__.py", line 308, in execute
+    settings.INSTALLED_APPS
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/conf/__init__.py", line 56, in __getattr__
+    self._setup(name)
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/conf/__init__.py", line 41, in _setup
+    self._wrapped = Settings(settings_module)
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/conf/__init__.py", line 110, in __init__
+    mod = importlib.import_module(self.SETTINGS_MODULE)
+  File "/usr/lib/python2.7/importlib/__init__.py", line 37, in import_module
+    __import__(name)
+  File "/home/ubuntu/it_helpdesk/it_helpdesk/settings.py", line 14, in <module>
+    import sentry_sdk
+ImportError: No module named sentry_sdk
+Traceback (most recent call last):
+  File "manage.py", line 22, in <module>
+    main()
+  File "manage.py", line 18, in main
+    execute_from_command_line(sys.argv)
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/core/management/__init__.py", line 364, in execute_from_command_line
+    utility.execute()
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/core/management/__init__.py", line 308, in execute
+    settings.INSTALLED_APPS
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/conf/__init__.py", line 56, in __getattr__
+    self._setup(name)
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/conf/__init__.py", line 41, in _setup
+    self._wrapped = Settings(settings_module)
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/django/conf/__init__.py", line 110, in __init__
+    mod = importlib.import_module(self.SETTINGS_MODULE)
+  File "/usr/lib/python2.7/importlib/__init__.py", line 37, in import_module
+    __import__(name)
+  File "/home/ubuntu/it_helpdesk/it_helpdesk/settings.py", line 14, in <module>
+    import sentry_sdk
+ImportError: No module named sentry_sdk

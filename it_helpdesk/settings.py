@@ -15,7 +15,7 @@ import os
 # from sentry_sdk.integrations.django import DjangoIntegration
 from datetime import timedelta
 
-# sentry_sdk.init(
+# sentry_sdk.init( 
 #     dsn="https://2ab86e744c7945ae901157e20e7799b7@o528200.ingest.sentry.io/5645399",
 #     integrations=[DjangoIntegration()],
 #     traces_sample_rate=1.0,
@@ -38,7 +38,7 @@ SECRET_KEY = 'heen()-oz@cx0%pd@5m(ki%q)(@d=!anj+bm$0x^j-wm8(4*pr'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.0.102','192.168.0.103','localhost','0.0.0.0']
+ALLOWED_HOSTS = ['15.207.55.45','localhost']
 
 
 # Application definition

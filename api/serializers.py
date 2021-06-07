@@ -155,10 +155,6 @@ class TicketFormSerializer(serializers.Serializer):
         initial='3' 
            )
 
-    # due_date = serializers.DateTimeField(
-    #     required=False,
-    # )
-
     attachment = serializers.FileField(required=False, allow_empty_file = True)
 
     def __init__(self, *args, **kwargs):
